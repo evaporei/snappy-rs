@@ -62,6 +62,26 @@ pub fn compress(src: &[u8]) -> Vec<u8> {
     dst
 }
 
+pub fn uncompress(src: &[u8]) -> Option<Vec<u8>> {
+    let src_len = src.len() as size_t;
+    let src_ptr = src.as_ptr() as *const c_char;
+
+    let mut dst_len: size_t = 0;
+    unsafe { snappy_uncompressed_length(src_ptr, src_len, &mut dst_len) };
+
+    let mut dst = Vec::with_capacity(dst_len);
+    let dst_ptr = dst.as_mut_ptr() as *mut c_char;
+
+    if unsafe { snappy_compress(src_ptr, src_len, dst_ptr, &mut dst_len) } == SnappyStatus::Ok {
+        unsafe {
+            dst.set_len(dst_len);
+        }
+        Some(dst)
+    } else {
+        None
+    }
+}
+
 #[test]
 fn test_round_trip() {
     let input = b"The quick brown fox jumps over the lazy dog";
