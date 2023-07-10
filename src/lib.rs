@@ -1,5 +1,4 @@
-use libc::{c_char, c_int, size_t};
-use std::ffi::CString;
+use libc::{c_char, size_t};
 
 #[derive(Debug, PartialEq)]
 #[repr(C)]
