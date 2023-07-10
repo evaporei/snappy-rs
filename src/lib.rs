@@ -179,15 +179,21 @@ fn valid() {
 #[test]
 fn invalid() {
     let d = vec![0, 0, 0, 0];
-    assert!(validate_compressed_buffer(&d).is_err());
-    assert!(uncompress(&d).is_err());
+    assert_eq!(
+        validate_compressed_buffer(&d),
+        Err(SnappyError::InvalidInput)
+    );
+    assert_eq!(uncompress(&d), Err(SnappyError::InvalidInput));
 }
 
 #[test]
 fn empty() {
     let d = vec![];
-    assert!(validate_compressed_buffer(&d).is_err());
-    assert!(uncompress(&d).is_err());
+    assert_eq!(
+        validate_compressed_buffer(&d),
+        Err(SnappyError::InvalidInput)
+    );
+    assert_eq!(uncompress(&d), Err(SnappyError::InvalidInput));
     let c = compress(&d).unwrap();
     assert!(validate_compressed_buffer(&c).is_ok());
     assert!(uncompress(&c) == Ok(d));
