@@ -1,14 +1,12 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+use libc::size_t;
+
+#[link(name = "snappy")]
+extern "C" {
+    fn snappy_max_compressed_length(source_length: size_t) -> size_t;
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+#[test]
+fn test_len() {
+    let len = unsafe { snappy_max_compressed_length(123) };
+    println!("{len}");
 }
