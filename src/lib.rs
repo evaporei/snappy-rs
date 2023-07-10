@@ -8,6 +8,16 @@ enum SnappyStatus {
     BufferTooSmall = 2,
 }
 
+impl SnappyStatus {
+    fn is_ok(&self) -> bool {
+        matches!(self, SnappyStatus::Ok)
+    }
+
+    fn is_err(&self) -> bool {
+        !self.is_ok()
+    }
+}
+
 #[link(name = "snappy")]
 extern "C" {
     fn snappy_compress(
@@ -86,14 +96,34 @@ fn test_round_trip() {
     assert_eq!(uncompressed, input);
 }
 
-pub fn validate_compressed_buffer(src: &[u8]) -> bool {
-    unsafe {
-        snappy_validate_compressed_buffer(src.as_ptr() as *const c_char, src.len())
-            == SnappyStatus::Ok
+#[derive(Debug, PartialEq)]
+pub enum SnappyError {
+    InvalidInput,
+    BufferTooSmall,
+}
+
+impl From<SnappyStatus> for SnappyError {
+    fn from(status: SnappyStatus) -> Self {
+        match status {
+            SnappyStatus::Ok => panic!("cannot convert from snappy status Ok into snappy error"),
+            SnappyStatus::InvalidInput => Self::InvalidInput,
+            SnappyStatus::BufferTooSmall => Self::BufferTooSmall,
+        }
     }
 }
 
-pub fn compress(src: &[u8]) -> Vec<u8> {
+pub fn validate_compressed_buffer(src: &[u8]) -> Result<(), SnappyError> {
+    let status =
+        unsafe { snappy_validate_compressed_buffer(src.as_ptr() as *const c_char, src.len()) };
+
+    if status.is_err() {
+        return Err(status.into());
+    }
+
+    Ok(())
+}
+
+pub fn compress(src: &[u8]) -> Result<Vec<u8>, SnappyError> {
     let src_len = src.len();
     let src_ptr = src.as_ptr() as *const c_char;
 
@@ -102,54 +132,62 @@ pub fn compress(src: &[u8]) -> Vec<u8> {
     let dst_ptr = dst.as_mut_ptr() as *mut c_char;
 
     unsafe {
-        snappy_compress(src_ptr, src_len, dst_ptr, &mut dst_len);
+        let status = snappy_compress(src_ptr, src_len, dst_ptr, &mut dst_len);
+        if status.is_err() {
+            return Err(status.into());
+        }
         dst.set_len(dst_len);
     };
 
-    dst
+    Ok(dst)
 }
 
-pub fn uncompress(src: &[u8]) -> Option<Vec<u8>> {
+pub fn uncompress(src: &[u8]) -> Result<Vec<u8>, SnappyError> {
     let src_len = src.len();
     let src_ptr = src.as_ptr() as *const c_char;
 
     let mut dst_len: size_t = 0;
-    unsafe { snappy_uncompressed_length(src_ptr, src_len, &mut dst_len) };
+    let status = unsafe { snappy_uncompressed_length(src_ptr, src_len, &mut dst_len) };
+    if status.is_err() {
+        return Err(status.into());
+    }
 
     let mut dst = Vec::with_capacity(dst_len);
     let dst_ptr = dst.as_mut_ptr() as *mut c_char;
 
-    if unsafe { snappy_uncompress(src_ptr, src_len, dst_ptr, &mut dst_len) } == SnappyStatus::Ok {
-        unsafe {
-            dst.set_len(dst_len);
-        }
-        Some(dst)
-    } else {
-        None
+    let status = unsafe { snappy_uncompress(src_ptr, src_len, dst_ptr, &mut dst_len) };
+    if status.is_err() {
+        return Err(status.into());
     }
+
+    unsafe {
+        dst.set_len(dst_len);
+    }
+
+    Ok(dst)
 }
 
 #[test]
 fn valid() {
     let d = vec![0xde, 0xad, 0xd0, 0x0d];
-    let c: &[u8] = &compress(&d);
-    assert!(validate_compressed_buffer(c));
-    assert!(uncompress(c) == Some(d));
+    let c: &[u8] = &compress(&d).unwrap();
+    assert!(validate_compressed_buffer(c).is_ok());
+    assert!(uncompress(c) == Ok(d));
 }
 
 #[test]
 fn invalid() {
     let d = vec![0, 0, 0, 0];
-    assert!(!validate_compressed_buffer(&d));
-    assert!(uncompress(&d).is_none());
+    assert!(validate_compressed_buffer(&d).is_err());
+    assert!(uncompress(&d).is_err());
 }
 
 #[test]
 fn empty() {
     let d = vec![];
-    assert!(!validate_compressed_buffer(&d));
-    assert!(uncompress(&d).is_none());
-    let c = compress(&d);
-    assert!(validate_compressed_buffer(&c));
-    assert!(uncompress(&c) == Some(d));
+    assert!(validate_compressed_buffer(&d).is_err());
+    assert!(uncompress(&d).is_err());
+    let c = compress(&d).unwrap();
+    assert!(validate_compressed_buffer(&c).is_ok());
+    assert!(uncompress(&c) == Ok(d));
 }
