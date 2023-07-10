@@ -1,5 +1,6 @@
 use libc::{c_char, size_t};
 
+#[allow(unused)]
 #[derive(Debug, PartialEq)]
 #[repr(C)]
 enum SnappyStatus {
