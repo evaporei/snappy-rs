@@ -50,7 +50,7 @@ fn test_round_trip() {
             input.as_ptr() as *const c_char,
             input.len(),
             output.as_mut_ptr() as *mut c_char,
-            &mut output_len as *mut size_t,
+            &mut output_len,
         );
         output.set_len(output_len);
         s
@@ -66,7 +66,7 @@ fn test_round_trip() {
         snappy_uncompressed_length(
             output.as_ptr() as *const c_char,
             output_len,
-            &mut uncompressed_len as *mut size_t,
+            &mut uncompressed_len,
         )
     };
     assert_eq!(uncompressed_len_status, SnappyStatus::Ok);
@@ -77,7 +77,7 @@ fn test_round_trip() {
             output.as_ptr() as *const c_char,
             output_len,
             uncompressed.as_mut_ptr() as *mut c_char,
-            &mut uncompressed_len as *mut size_t,
+            &mut uncompressed_len,
         );
         uncompressed.set_len(uncompressed_len);
         s
@@ -95,7 +95,7 @@ pub fn validate_compressed_buffer(src: &[u8]) -> bool {
 }
 
 pub fn compress(src: &[u8]) -> Vec<u8> {
-    let src_len = src.len() as size_t;
+    let src_len = src.len();
     let src_ptr = src.as_ptr() as *const c_char;
 
     let mut dst_len = unsafe { snappy_max_compressed_length(src_len) };
@@ -111,7 +111,7 @@ pub fn compress(src: &[u8]) -> Vec<u8> {
 }
 
 pub fn uncompress(src: &[u8]) -> Option<Vec<u8>> {
-    let src_len = src.len() as size_t;
+    let src_len = src.len();
     let src_ptr = src.as_ptr() as *const c_char;
 
     let mut dst_len: size_t = 0;
