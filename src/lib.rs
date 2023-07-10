@@ -39,49 +39,6 @@ extern "C" {
     ) -> SnappyStatus;
 }
 
-pub fn validate_compressed_buffer(src: &[u8]) -> bool {
-    unsafe {
-        snappy_validate_compressed_buffer(src.as_ptr() as *const c_char, src.len())
-            == SnappyStatus::Ok
-    }
-}
-
-pub fn compress(src: &[u8]) -> Vec<u8> {
-    let src_len = src.len() as size_t;
-    let src_ptr = src.as_ptr() as *const c_char;
-
-    let mut dst_len = unsafe { snappy_max_compressed_length(src_len) };
-    let mut dst: Vec<u8> = Vec::with_capacity(dst_len);
-    let dst_ptr = dst.as_mut_ptr() as *mut c_char;
-
-    unsafe {
-        snappy_compress(src_ptr, src_len, dst_ptr, &mut dst_len);
-        dst.set_len(dst_len);
-    };
-
-    dst
-}
-
-pub fn uncompress(src: &[u8]) -> Option<Vec<u8>> {
-    let src_len = src.len() as size_t;
-    let src_ptr = src.as_ptr() as *const c_char;
-
-    let mut dst_len: size_t = 0;
-    unsafe { snappy_uncompressed_length(src_ptr, src_len, &mut dst_len) };
-
-    let mut dst = Vec::with_capacity(dst_len);
-    let dst_ptr = dst.as_mut_ptr() as *mut c_char;
-
-    if unsafe { snappy_compress(src_ptr, src_len, dst_ptr, &mut dst_len) } == SnappyStatus::Ok {
-        unsafe {
-            dst.set_len(dst_len);
-        }
-        Some(dst)
-    } else {
-        None
-    }
-}
-
 #[test]
 fn test_round_trip() {
     let input = b"The quick brown fox jumps over the lazy dog";
@@ -125,4 +82,47 @@ fn test_round_trip() {
 
     // // didn't work ;-;
     // assert_eq!(uncompressed, input);
+}
+
+pub fn validate_compressed_buffer(src: &[u8]) -> bool {
+    unsafe {
+        snappy_validate_compressed_buffer(src.as_ptr() as *const c_char, src.len())
+            == SnappyStatus::Ok
+    }
+}
+
+pub fn compress(src: &[u8]) -> Vec<u8> {
+    let src_len = src.len() as size_t;
+    let src_ptr = src.as_ptr() as *const c_char;
+
+    let mut dst_len = unsafe { snappy_max_compressed_length(src_len) };
+    let mut dst: Vec<u8> = Vec::with_capacity(dst_len);
+    let dst_ptr = dst.as_mut_ptr() as *mut c_char;
+
+    unsafe {
+        snappy_compress(src_ptr, src_len, dst_ptr, &mut dst_len);
+        dst.set_len(dst_len);
+    };
+
+    dst
+}
+
+pub fn uncompress(src: &[u8]) -> Option<Vec<u8>> {
+    let src_len = src.len() as size_t;
+    let src_ptr = src.as_ptr() as *const c_char;
+
+    let mut dst_len: size_t = 0;
+    unsafe { snappy_uncompressed_length(src_ptr, src_len, &mut dst_len) };
+
+    let mut dst = Vec::with_capacity(dst_len);
+    let dst_ptr = dst.as_mut_ptr() as *mut c_char;
+
+    if unsafe { snappy_compress(src_ptr, src_len, dst_ptr, &mut dst_len) } == SnappyStatus::Ok {
+        unsafe {
+            dst.set_len(dst_len);
+        }
+        Some(dst)
+    } else {
+        None
+    }
 }
