@@ -132,13 +132,14 @@ pub fn compress(src: &[u8]) -> Result<Vec<u8>, SnappyError> {
     let mut dst: Vec<u8> = Vec::with_capacity(dst_len);
     let dst_ptr = dst.as_mut_ptr() as *mut c_char;
 
+    let status = unsafe { snappy_compress(src_ptr, src_len, dst_ptr, &mut dst_len) };
+    if status.is_err() {
+        return Err(status.into());
+    }
+
     unsafe {
-        let status = snappy_compress(src_ptr, src_len, dst_ptr, &mut dst_len);
-        if status.is_err() {
-            return Err(status.into());
-        }
         dst.set_len(dst_len);
-    };
+    }
 
     Ok(dst)
 }
