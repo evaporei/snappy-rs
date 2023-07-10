@@ -46,12 +46,14 @@ fn test_round_trip() {
     let mut output: Vec<u8> = Vec::with_capacity(output_len);
 
     let compress_status = unsafe {
-        snappy_compress(
+        let s = snappy_compress(
             input.as_ptr() as *const c_char,
             input.len(),
             output.as_mut_ptr() as *mut c_char,
             &mut output_len as *mut size_t,
-        )
+        );
+        output.set_len(output_len);
+        s
     };
     assert_eq!(compress_status, SnappyStatus::Ok);
 
@@ -71,17 +73,18 @@ fn test_round_trip() {
 
     let mut uncompressed: Vec<u8> = Vec::with_capacity(uncompressed_len);
     let uncompressed_status = unsafe {
-        snappy_uncompress(
+        let s = snappy_uncompress(
             output.as_ptr() as *const c_char,
             output_len,
             uncompressed.as_mut_ptr() as *mut c_char,
             &mut uncompressed_len as *mut size_t,
-        )
+        );
+        uncompressed.set_len(uncompressed_len);
+        s
     };
     assert_eq!(uncompressed_status, SnappyStatus::Ok);
 
-    // // didn't work ;-;
-    // assert_eq!(uncompressed, input);
+    assert_eq!(uncompressed, input);
 }
 
 pub fn validate_compressed_buffer(src: &[u8]) -> bool {
