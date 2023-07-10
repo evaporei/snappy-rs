@@ -39,6 +39,13 @@ extern "C" {
     ) -> SnappyStatus;
 }
 
+pub fn validate_compressed_buffer(src: &[u8]) -> bool {
+    unsafe {
+        snappy_validate_compressed_buffer(src.as_ptr() as *const c_char, src.len())
+            == SnappyStatus::Ok
+    }
+}
+
 #[test]
 fn test_round_trip() {
     let input = b"The quick brown fox jumps over the lazy dog";
