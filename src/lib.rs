@@ -46,6 +46,22 @@ pub fn validate_compressed_buffer(src: &[u8]) -> bool {
     }
 }
 
+pub fn compress(src: &[u8]) -> Vec<u8> {
+    let src_len = src.len() as size_t;
+    let src_ptr = src.as_ptr() as *const c_char;
+
+    let mut dst_len = unsafe { snappy_max_compressed_length(src_len) };
+    let mut dst: Vec<u8> = Vec::with_capacity(dst_len);
+    let dst_ptr = dst.as_mut_ptr() as *mut c_char;
+
+    unsafe {
+        snappy_compress(src_ptr, src_len, dst_ptr, &mut dst_len);
+        dst.set_len(dst_len);
+    };
+
+    dst
+}
+
 #[test]
 fn test_round_trip() {
     let input = b"The quick brown fox jumps over the lazy dog";
