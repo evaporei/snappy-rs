@@ -117,7 +117,7 @@ pub fn uncompress(src: &[u8]) -> Option<Vec<u8>> {
     let mut dst = Vec::with_capacity(dst_len);
     let dst_ptr = dst.as_mut_ptr() as *mut c_char;
 
-    if unsafe { snappy_compress(src_ptr, src_len, dst_ptr, &mut dst_len) } == SnappyStatus::Ok {
+    if unsafe { snappy_uncompress(src_ptr, src_len, dst_ptr, &mut dst_len) } == SnappyStatus::Ok {
         unsafe {
             dst.set_len(dst_len);
         }
@@ -125,4 +125,29 @@ pub fn uncompress(src: &[u8]) -> Option<Vec<u8>> {
     } else {
         None
     }
+}
+
+#[test]
+fn valid() {
+    let d = vec![0xde, 0xad, 0xd0, 0x0d];
+    let c: &[u8] = &compress(&d);
+    assert!(validate_compressed_buffer(c));
+    assert!(uncompress(c) == Some(d));
+}
+
+#[test]
+fn invalid() {
+    let d = vec![0, 0, 0, 0];
+    assert!(!validate_compressed_buffer(&d));
+    assert!(uncompress(&d).is_none());
+}
+
+#[test]
+fn empty() {
+    let d = vec![];
+    assert!(!validate_compressed_buffer(&d));
+    assert!(uncompress(&d).is_none());
+    let c = compress(&d);
+    assert!(validate_compressed_buffer(&c));
+    assert!(uncompress(&c) == Some(d));
 }
